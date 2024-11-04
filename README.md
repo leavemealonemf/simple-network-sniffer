@@ -6,9 +6,9 @@ A Network Packet Sniffer developed in C.\
 ## How to use
 ```
 git clone https://github.com/leavemealonemf/simple-network-sniffer.git
-cd simply-sniffer
+cd simple-network-sniffer
 make
-./sniffer.out <network interface> <packet's count>
+./simple-network-sniffer.out <network interface> <packet's count>
 
 For example (./sniffer.out eth0 1)
 ```
