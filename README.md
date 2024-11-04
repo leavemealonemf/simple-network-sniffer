@@ -5,7 +5,7 @@ A Network Packet Sniffer developed in C.
 
 ## How to use
 ```
-git clone _
+git clone https://github.com/leavemealonemf/simple-network-sniffer.git
 cd simply-sniffer
 make
 ./sniffer.out <network interface> <packet's count>
