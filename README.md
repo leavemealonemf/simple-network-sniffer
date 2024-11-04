@@ -9,7 +9,7 @@ cd simple-network-sniffer
 make
 sudo ./simple-network-sniffer.out <network interface> <packet's count>
 
-For example (./simple-network-sniffer.out eth0 1)
+For example (./simple-network-sniffer.out eth0 2)
 ```
 **Result**
 
