@@ -126,10 +126,10 @@ void parse_ip_headers(unsigned char *packet, int packet_size)
             d_addr.s_addr = ip_header->daddr;
             s_addr.s_addr = ip_header->saddr;
 
-            printf("\n - Desctination IP Addr: %s", inet_ntoa(d_addr));
+            printf("\n - Destination IP Addr: %s", inet_ntoa(d_addr));
             printf("\n - Source IP Addr: %s\n", inet_ntoa(s_addr));
         } else 
-            printf("\n - Desctination IP Addr: NULL\n");
+            printf("\n - Destination IP Addr: NULL\n");
         
     }
     printf("\n");
