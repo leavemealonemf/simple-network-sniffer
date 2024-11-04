@@ -128,9 +128,7 @@ void parse_ip_headers(unsigned char *packet, int packet_size)
 
             printf("\n - Destination IP Addr: %s", inet_ntoa(d_addr));
             printf("\n - Source IP Addr: %s\n", inet_ntoa(s_addr));
-        } else 
-            printf("\n - Destination IP Addr: NULL\n");
-        
+        }
     }
     printf("\n");
 }
@@ -139,7 +137,7 @@ int main(int argc, char** argv)
 {
     if (argc < 3)
     {
-        printf("Run failed. Exec commad: ./a.out <network interface> <packet's count>\n");
+        printf("Run failed. Exec commad: ./simple-network-sniffer.out <network interface> <packet's count>\n");
         exit(-1);
     }
 
