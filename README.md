@@ -11,7 +11,6 @@ make
 ./sniffer.out <network interface> <packet's count>
 
 For example (./sniffer.out eth0 1)
-
 ```
 **Result**
 
@@ -28,7 +27,6 @@ For example (./sniffer.out eth0 1)
  - Protocol: 08 00 
  - Destination IP Addr: 192.168.0.100
  - Source IP Addr: 64.31.100.58
-
 ```
 ## Others
 > **TODO:** TCP header parse & data parse
