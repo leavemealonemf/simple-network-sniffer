@@ -12,6 +12,7 @@
 #include<arpa/inet.h>
 #include<unistd.h>
 #include<linux/ip.h>
+#include<linux/tcp.h>
 
 #define PACKET_BUF 2048
 
@@ -65,7 +66,6 @@ void bind_raw_sock_to_ifce(char* device, int sd, int proto)
 
 void print_in_hex(char* msg, unsigned char* p, int len)
 {
-    printf("\n");
     printf("%s", msg);
 
     while (len--)
@@ -73,20 +73,31 @@ void print_in_hex(char* msg, unsigned char* p, int len)
         printf("%.2X ", *p);
         p++;
     }
+    printf("\n");
 }
 
-void print_packet_info_hex(unsigned char *packet, int packet_size)
-{   
-    unsigned char *p = packet;
-    printf("\n\n---------packet--start-----------\n\n");
-
-    while(packet_size--)
-    {
-        printf("%.2x ", *p);
-        p++;
+const char* get_eth_protocol_name(unsigned short proto) 
+{
+    switch (proto) {
+        case 0x0800:
+            return "IPv4";
+        case 0x0806:
+            return "ARP";
+        case 0x86DD:
+            return "IPv6";
+        default:
+            return "Unknown Protocol";
     }
+}
 
-    printf("\n\n---------packet--end-----------\n\n");
+void print_dest_mac_address(unsigned char *mac) 
+{
+    printf("\n - Destination MAC Addr: %02x:%02x:%02x:%02x:%02x:%02x", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
+}
+
+void print_src_mac_address(unsigned char *mac) 
+{
+    printf("\n - Source MAC Addr: %02x:%02x:%02x:%02x:%02x:%02x", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
 }
 
 int parse_eth_headers(unsigned char *packet, int packet_size)
@@ -101,10 +112,12 @@ int parse_eth_headers(unsigned char *packet, int packet_size)
 
     eth_header = (struct ethhdr*)packet;
     
-    printf("-----------------------");
-    print_in_hex(" - Destination MAC Addr: ", eth_header->h_dest, 6);
-    print_in_hex(" - Source MAC Addr: ", eth_header->h_source, 6);
-    print_in_hex(" - Protocol: ", (unsigned char*)&eth_header->h_proto, 2);
+    const char* proto = get_eth_protocol_name(ntohs(eth_header->h_proto));
+
+    printf("----------------------------------");
+    print_dest_mac_address(eth_header->h_dest);
+    print_src_mac_address(eth_header->h_source);
+    printf("\n - Protocol: %s\n", proto);
 }
 
 void parse_ip_headers(unsigned char *packet, int packet_size)
@@ -118,7 +131,7 @@ void parse_ip_headers(unsigned char *packet, int packet_size)
 
     if (ntohs(eth_header->h_proto) == ip_p)
     {
-        if (packet_size >= (sizeof(struct ethhdr) + sizeof(struct iphdr)))
+        if (packet_size >= (sizeof(struct ethhdr) + ip_header->ihl*4))
         {
             ip_header = (struct iphdr*)(packet + sizeof(struct ethhdr));
 
@@ -126,11 +139,101 @@ void parse_ip_headers(unsigned char *packet, int packet_size)
             d_addr.s_addr = ip_header->daddr;
             s_addr.s_addr = ip_header->saddr;
 
-            printf("\n - Destination IP Addr: %s", inet_ntoa(d_addr));
+            printf(" - Destination IP Addr: %s", inet_ntoa(d_addr));
             printf("\n - Source IP Addr: %s\n", inet_ntoa(s_addr));
         }
     }
-    printf("\n");
+}
+
+void parse_tcp_headers(unsigned char *packet, int packet_size)
+{
+    struct ethhdr* eth_header;
+    struct iphdr* ip_header;
+    struct tcphdr* tcp_header;
+
+    uint16_t ip_p = 2048;
+
+    if (packet_size >= (sizeof(struct ethhdr) + sizeof(struct iphdr) + sizeof(struct tcphdr)))
+    {
+        eth_header = (struct ethhdr*)packet;
+
+        if (ntohs(eth_header->h_proto) == ip_p)
+        {
+            ip_header = (struct iphdr*)(packet + sizeof(struct ethhdr));
+
+            if (ip_header->protocol == IPPROTO_TCP)
+            {
+                tcp_header = (struct tcphdr*)(packet + sizeof(struct ethhdr) + ip_header->ihl*4);
+
+                printf(" - Destination PORT: %d", ntohs(tcp_header->dest));
+                printf("\n - Source PORT: %d\n", ntohs(tcp_header->source));
+            }
+        }
+    }
+}
+
+int is_tcp_ip_packet(unsigned char *packet, int packet_size)
+{
+    struct ethhdr* eth_header;
+    struct iphdr* ip_header;
+
+    uint16_t ip_p = 2048;
+
+    eth_header = (struct ethhdr*)packet;
+
+    if (ntohs(eth_header->h_proto) == ip_p)
+    {
+        ip_header = (struct iphdr*)(packet + sizeof(struct ethhdr));
+
+        if (ip_header->protocol == IPPROTO_TCP)
+        {
+            return 1;
+        } 
+        else
+        {
+            return -1;
+        }
+    }
+    else
+    {
+        return -1;
+    }
+
+    return 0;
+}
+
+int parse_data(unsigned char *packet, int packet_size)
+{
+    struct ethhdr* eth_header;
+    struct iphdr* ip_header;
+    struct tcphdr* tcp_header;
+    unsigned char *data;
+    int d_len;
+
+    if (packet_size > (sizeof(struct ethhdr) + sizeof(struct iphdr) + sizeof(struct tcphdr)))
+    {
+        ip_header = (struct iphdr*)(packet + sizeof(struct ethhdr));
+        data = (packet + sizeof(struct ethhdr) + ip_header->ihl*4 + sizeof(struct tcphdr));
+        d_len = ntohs(ip_header->tot_len) - ip_header->ihl*4 - sizeof(struct tcphdr);
+
+        if (d_len)
+        {
+            printf(" - Data Length: %d\n", d_len);
+            print_in_hex(" - Data: ", data, d_len);
+            return 1;
+        }
+        else 
+        {
+            printf("\nNo data in packet\n");
+            return 0;
+        }
+    }
+    else
+    {
+        printf("\nNo data in packet\n");
+        return 0;
+    }
+    return 0;
 }
 
 int main(int argc, char** argv)
@@ -161,9 +264,17 @@ int main(int argc, char** argv)
             exit(-1);
         }
                 
-        // print_packet_info_hex(packet_buffer, PACKET_BUF);
         parse_eth_headers(packet_buffer, PACKET_BUF);
         parse_ip_headers(packet_buffer, PACKET_BUF);
+        parse_tcp_headers(packet_buffer, PACKET_BUF);
+
+        // printf("%d\n", is_tcp_ip_packet(packet_buffer, PACKET_BUF));
+
+        if ((is_tcp_ip_packet(packet_buffer, PACKET_BUF)) == 1)
+        {
+            if (!parse_data(packet_buffer, PACKET_BUF))
+                packets_to_sniff++;
+        }
     }
 
     close(sr_fd);

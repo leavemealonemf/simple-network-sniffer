@@ -1,2 +1,2 @@
 add:
-	gcc main.c -o sniffer.out
+	gcc main.c -o simple-network-sniffer.out
